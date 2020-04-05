@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "500439092202",
+    "firebase_url": "https://minhas-viagens-43a47.firebaseio.com",
+    "project_id": "minhas-viagens-43a47",
+    "storage_bucket": "minhas-viagens-43a47.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:500439092202:android:174de73cfddc812259c093",
+        "android_client_info": {
+          "package_name": "br.com.code4line.my_travels"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "500439092202-5dnfa8c2bvlb3n7nfohibjpev2r4mod9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6nW27BdGZFTWBsKD-JGJRZHhi4KMIQLk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "500439092202-5dnfa8c2bvlb3n7nfohibjpev2r4mod9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

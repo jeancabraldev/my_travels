@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import './map.dart';
 
@@ -8,16 +11,17 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
 
-  //Lista de viagens
-  List _listTravels = [
-    'São Paulo',
-    'Curitiba',
-    'México',
-  ];
+  final _controller = StreamController<QuerySnapshot>.broadcast();
 
-  //Abrindo mapa
-  _openMap() {
-    print('Abindo o mapa');
+  //Instanciando banco firebase
+  Firestore _db = Firestore.instance;
+
+  //Abrindo mapa no local que o usuário marcou
+  _openMap(String idTravel) {
+    Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (_) => Mapa(idTravel: idTravel,)),
+    );
   }
 
   //Adicionando local
@@ -26,13 +30,28 @@ class _HomeState extends State<Home> {
     //Abrindo o mapa
     Navigator.push(
       context, 
-      MaterialPageRoute(builder: (_) => Map()),
+      MaterialPageRoute(builder: (_) => Mapa()),
     );
   }
 
   //Deletando viagens
-  _deleteTravels() {
-    print('Excluiido um local');
+  _deleteTravels(String idTravel) {
+    _db.collection('travel').document(idTravel).delete();
+  }
+
+  //Recuperando o local salvo do usuário
+  _addListenerTravels() async {
+    final stream = _db.collection('travel').snapshots();
+
+    stream.listen((dados) {
+      _controller.add(dados);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _addListenerTravels();
   }
 
   @override
@@ -50,45 +69,64 @@ class _HomeState extends State<Home> {
         child: Icon(Icons.add, color: Colors.white,),
         onPressed: () => _addLocal(),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: ListView.builder(
-              itemCount: _listTravels.length,
-              itemBuilder: (context, index) {
-                
-                String title = _listTravels[index];
-                
-                return GestureDetector(
-                  onTap: () => _openMap(),
-                  child: Card(
-                    child: ListTile(
-                        title: Text(title, 
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          GestureDetector(
-                            onTap: () => _deleteTravels(),
-                            child: Padding(
-                              padding: EdgeInsets.all(2),
-                              child: Icon(Icons.delete),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _controller.stream,
+        builder: (context, snapShot) {
+          switch(snapShot.connectionState){
+            case ConnectionState.none:
+            case ConnectionState.waiting:
+            case ConnectionState.active:
+            case ConnectionState.done:
+
+            //Recuperando os dados
+            QuerySnapshot querySnapshot = snapShot.data;
+            List<DocumentSnapshot> travels = querySnapshot.documents.toList();
+
+            return Column(
+              children: <Widget>[
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: travels.length,
+                    itemBuilder: (context, index) {
+                      
+                      DocumentSnapshot item = travels[index];
+                      String title = item['title'];
+                      String idTravel = item.documentID;
+
+                      return GestureDetector(
+                        onTap: () => _openMap(idTravel),
+                        child: Card(
+                          child: ListTile(
+                              title: Text(title, 
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold
+                              ),
                             ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            )
-          ),
-        ],
-      ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                GestureDetector(
+                                  onTap: () => _deleteTravels(idTravel),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(2),
+                                    child: Icon(Icons.delete),
+                                  ),
+                                )
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                ),
+              ],
+            );
+            break;
+          }
+        }
+      )
     );
   }
 }

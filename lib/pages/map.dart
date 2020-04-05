@@ -1,25 +1,35 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../widget/dialogAction.dart';
 
-class Map extends StatefulWidget {
+class Mapa extends StatefulWidget {
+
+  String idTravel;
+
+  Mapa({this.idTravel});
+
   @override
-  _MapState createState() => _MapState();
+  _MapaState createState() => _MapaState();
 }
 
-class _MapState extends State<Map> {
+class _MapaState extends State<Mapa> {
 
   Completer<GoogleMapController> _controllerMap = Completer();
   Set<Marker> _markers = {};
 
+  //Instanciando Firestore
+  Firestore _db = Firestore.instance;
+  
   //Definnindo a posição do usuário através da posição da camera do google maps
   CameraPosition _cameraPosition = CameraPosition(
     target: LatLng(-23.562436, -46.655005),
     zoom: 18
   );
+
 
   //Criando mapa
   _onMapCreated(GoogleMapController controller) {
@@ -27,7 +37,7 @@ class _MapState extends State<Map> {
   }
 
   //Exibindo marcadores
-  _displayMarker(LatLng latLng) async {
+  _addMarker(LatLng latLng) async {
 
     List<Placemark> listAldress = await Geolocator()
       .placemarkFromCoordinates(latLng.latitude, latLng.longitude);
@@ -41,12 +51,20 @@ class _MapState extends State<Map> {
         markerId: MarkerId('marcador-${latLng.latitude}-${latLng.longitude}'),
         position: latLng,
         infoWindow: InfoWindow(
-        title: street
+          title: street
         )
       );
 
     setState(() {
       _markers.add(marker);
+
+      //Salvando local no Firebase
+      Map<String, dynamic> travels = Map();
+      travels['title'] = street;
+      travels['latitude'] = latLng.latitude;
+      travels['longitude'] = latLng.longitude;
+
+      _db.collection('travel').add(travels);
     });
     }
   }
@@ -77,11 +95,51 @@ class _MapState extends State<Map> {
         });      
     }
 
+    //Recuperando o id da viagem
+    _recoverTravelId(String idTravel) async {
+      //verificando se id da viagem é nulo
+      if(idTravel != null) {
+        //Exibi marcador da viagem salvo
+        DocumentSnapshot documentSnapshot = await _db.collection('travel')
+          .document(idTravel).get();
+
+          //Recuperando os dados
+          var dados = documentSnapshot.data;
+
+          String title = dados['title'];
+          LatLng latLng = LatLng(dados['latitude'], dados['longitude']);
+
+          setState(() {
+
+            Marker marker = Marker(
+              markerId: MarkerId('marcador-${latLng.latitude}-${latLng.longitude}'),
+              position: latLng,
+              infoWindow: InfoWindow(
+                title: title
+              )
+            );
+
+            _markers.add(marker);
+            _cameraPosition = CameraPosition(
+              target: latLng,
+              zoom: 18
+            );
+            _moveCamera();
+          });
+
+      } else {
+        _addListenerLocation();
+
+      }
+    }
+
+
   @override
   void initState() {
     super.initState();
 
-    _addListenerLocation();
+    //Recuperando o id da viagem
+    _recoverTravelId(widget.idTravel);
 
   }
 
@@ -109,7 +167,7 @@ class _MapState extends State<Map> {
           initialCameraPosition: _cameraPosition,
           markers: _markers,
           onMapCreated: _onMapCreated,
-          onLongPress: _displayMarker,
+          onLongPress: _addMarker,
         ),
       ),
     );
